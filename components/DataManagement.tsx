@@ -1,6 +1,6 @@
 
 import React, { useRef, useState } from 'react';
-import { Download, Upload, FileText, CheckCircle2, AlertCircle, PiggyBank, Trash2, ShieldAlert } from 'lucide-react';
+import { Download, Upload, FileText, CheckCircle2, AlertCircle, PiggyBank } from 'lucide-react';
 import { Transaction, Dividend, TransactionType } from '../types';
 
 interface DataManagementProps {
@@ -27,30 +27,6 @@ const DataManagement: React.FC<DataManagementProps> = ({
     // Scroll to top so user sees the message
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => setMessage(null), 3000);
-  };
-
-  const handleClearTransactions = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (window.confirm('確定要刪除「所有」交易紀錄嗎？此動作無法復原。')) {
-      onImportTransactions([]);
-      showMessage('交易紀錄已清空', 'success');
-    }
-  };
-
-  const handleClearDividends = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (window.confirm('確定要刪除「所有」股息紀錄嗎？此動作無法復原。')) {
-      onImportDividends([]);
-      showMessage('股息紀錄已清空', 'success');
-    }
-  };
-
-  const handleResetApp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (window.confirm('【危險操作】確定要重置所有資料嗎？這將會清除所有交易、股息以及您設定的估計值。')) {
-      onResetAll();
-      showMessage('系統已全面重置', 'success');
-    }
   };
 
   const downloadCSV = (content: string, fileName: string) => {
@@ -181,6 +157,10 @@ const DataManagement: React.FC<DataManagementProps> = ({
               </div>
             </button>
 
+            <div className="py-1 text-center">
+              <p className="text-sm font-bold text-blue-600">匯入之前,要對數據管理資料清空</p>
+            </div>
+
             <div className="relative">
               <input 
                 type="file" 
@@ -199,16 +179,6 @@ const DataManagement: React.FC<DataManagementProps> = ({
                 </div>
               </button>
             </div>
-
-            <button 
-              type="button"
-              onClick={handleClearTransactions}
-              disabled={transactions.length === 0}
-              className="w-full flex items-center justify-center space-x-2 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all font-medium disabled:opacity-30 cursor-pointer"
-            >
-              <Trash2 size={18} />
-              <span>清空所有交易紀錄</span>
-            </button>
           </div>
         </div>
 
@@ -235,6 +205,10 @@ const DataManagement: React.FC<DataManagementProps> = ({
               </div>
             </button>
 
+            <div className="py-1 text-center">
+              <p className="text-sm font-bold text-emerald-600">匯入之前,要對數據管理資料清空</p>
+            </div>
+
             <div className="relative">
               <input 
                 type="file" 
@@ -253,41 +227,8 @@ const DataManagement: React.FC<DataManagementProps> = ({
                 </div>
               </button>
             </div>
-
-            <button 
-              type="button"
-              onClick={handleClearDividends}
-              disabled={dividends.length === 0}
-              className="w-full flex items-center justify-center space-x-2 p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all font-medium disabled:opacity-30 cursor-pointer"
-            >
-              <Trash2 size={18} />
-              <span>清空所有股息紀錄</span>
-            </button>
           </div>
         </div>
-      </div>
-
-      {/* Master Reset Area */}
-      <div className="mt-12 bg-red-50 p-8 rounded-3xl border border-red-100 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-start space-x-4">
-          <div className="p-3 bg-red-100 text-red-600 rounded-2xl">
-            <ShieldAlert size={28} />
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-red-900">系統全面重置</h4>
-            <p className="text-sm text-red-700 leading-relaxed mt-1">
-              這將會清除「所有」存在瀏覽器中的資料。如果您想要更換設備或徹底重新開始，請使用此按鈕。
-            </p>
-          </div>
-        </div>
-        <button 
-          type="button"
-          onClick={handleResetApp}
-          className="whitespace-nowrap bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-red-200 transition-all flex items-center space-x-2 cursor-pointer"
-        >
-          <Trash2 size={20} />
-          <span>立即重置所有資料</span>
-        </button>
       </div>
     </div>
   );
