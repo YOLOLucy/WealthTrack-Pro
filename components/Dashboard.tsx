@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { Transaction, Dividend, Holding, TransactionType } from '../types';
 import { TrendingUp, DollarSign, Wallet, Activity, ArrowUpRight, BarChart3, Percent } from 'lucide-react';
+import AIInsights from './AIInsights';
 
 const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#ca8a04', '#0891b2'];
 
@@ -296,6 +297,11 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
             )}
           </div>
         </div>
+      </div>
+
+      {/* AI 分析區域 */}
+      <div className="mt-12">
+        <AIInsights holdings={holdings} transactions={transactions} />
       </div>
     </div>
   );
