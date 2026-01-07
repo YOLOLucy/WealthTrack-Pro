@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Search, Loader2, Tag, Check } from 'lucide-react';
+import { Search, Loader2, Tag, Check, AlertCircle } from 'lucide-react';
 
 export interface Suggestion {
   ticker: string;
@@ -21,6 +21,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastProcessedQuery = useRef<string>('');
@@ -37,19 +38,19 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
     }
 
     setIsOpen(true);
+    setError(null);
 
     const timer = setTimeout(() => {
       if (query !== lastProcessedQuery.current) {
         searchTickers(query);
         lastProcessedQuery.current = query;
       }
-    }, 600); // Slightly longer debounce for reliability
+    }, 700); // Increased debounce for better stability
 
     return () => clearTimeout(timer);
   }, [query]);
 
   useEffect(() => {
-    // Handling click/touch outside to close dropdown
     const handleClickOutside = (event: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -64,12 +65,13 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
 
   const searchTickers = async (searchTerm: string) => {
     setLoading(true);
+    setError(null);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Find 5 relevant stock symbols compatible with Yahoo Finance for: "${searchTerm}". 
-        CRITICAL: For non-US stocks, use Yahoo suffixes (e.g. 2330.TW for TSMC, 0050.TW for Yuanta, 0700.HK for Tencent). 
+        CRITICAL: For non-US stocks, use Yahoo suffixes (e.g. 2330.TW, 0050.TW, 0700.HK, 0001.HK). 
         Return ONLY a JSON array of objects with keys: ticker, name, exchange.`,
         config: {
           responseMimeType: "application/json",
@@ -88,10 +90,14 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         }
       });
 
-      const results = JSON.parse(response.text || "[]");
-      setSuggestions(results);
+      const rawText = response.text || "[]";
+      // Clean potential markdown or extra characters
+      const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const results = JSON.parse(cleanJson);
+      setSuggestions(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error("Ticker search error:", error);
+      setError("Search failed. Check connection.");
     } finally {
       setLoading(false);
     }
@@ -104,7 +110,6 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   };
 
   const selectSuggestion = (e: React.PointerEvent, s: Suggestion) => {
-    // Important for iOS: stop default event to prevent keyboard flash or blur issues
     e.preventDefault();
     e.stopPropagation();
     
@@ -135,6 +140,8 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         <div className="absolute right-3 top-3.5">
           {loading ? (
             <Loader2 size={18} className="animate-spin text-blue-500" />
+          ) : error ? (
+            <AlertCircle size={18} className="text-red-400" />
           ) : (
             <Search size={18} className="text-slate-300" />
           )}
@@ -143,35 +150,40 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
 
       {isOpen && (
         <div 
-          className="absolute left-0 right-0 z-[9999] mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-          style={{ maxHeight: '300px' }}
+          className="absolute left-0 right-0 z-[10000] mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{ maxHeight: '320px' }}
         >
-          {loading && suggestions.length === 0 ? (
+          {loading ? (
             <div className="p-8 text-center text-sm text-slate-500 flex flex-col items-center justify-center space-y-3">
               <Loader2 size={24} className="animate-spin text-blue-600" />
               <span className="font-medium">Searching Yahoo Finance...</span>
             </div>
+          ) : error ? (
+            <div className="p-6 text-center text-sm text-red-500 flex flex-col items-center space-y-2">
+              <AlertCircle size={20} />
+              <span className="font-medium">{error}</span>
+            </div>
           ) : (
-            <div className="overflow-y-auto max-h-[290px] overscroll-contain">
+            <div className="overflow-y-auto max-h-[310px] overscroll-contain">
               {suggestions.map((s, idx) => (
                 <div
                   key={idx}
                   onPointerDown={(e) => selectSuggestion(e, s)}
                   className="w-full text-left px-5 py-4 hover:bg-slate-50 active:bg-slate-100 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors cursor-pointer"
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <span className="font-bold text-slate-900 text-base">{s.ticker}</span>
-                    <span className="text-xs text-slate-500 truncate max-w-[160px]">{s.name}</span>
+                    <span className="text-xs text-slate-500 truncate">{s.name}</span>
                   </div>
-                  <div className="flex flex-col items-end">
+                  <div className="flex flex-col items-end flex-shrink-0 ml-4">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.exchange}</span>
                     {value === s.ticker && <Check size={18} className="text-emerald-500 mt-1" />}
                   </div>
                 </div>
               ))}
-              {suggestions.length === 0 && !loading && (
+              {suggestions.length === 0 && !loading && !error && (
                 <div className="p-8 text-center text-sm text-slate-400 italic">
-                  No Yahoo Finance results found.
+                  Type more to find stocks...
                 </div>
               )}
             </div>

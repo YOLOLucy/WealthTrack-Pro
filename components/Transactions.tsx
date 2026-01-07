@@ -56,7 +56,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
   return (
     <div className="space-y-6">
       {showForm ? (
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="relative bg-white p-8 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-300 z-10">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-slate-900">New Transaction</h3>
             <button 
@@ -88,7 +88,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
                 placeholder="e.g. Apple or AAPL"
               />
               {formData.name && (
-                <p className="text-xs text-blue-600 font-medium px-1">Selected: {formData.name}</p>
+                <p className="text-xs text-blue-600 font-medium px-1 truncate">Selected: {formData.name}</p>
               )}
             </div>
             <div className="space-y-2">
