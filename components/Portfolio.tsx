@@ -58,11 +58,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ holdings, onUpdateEstimate }) => 
                             {h.ticker[0]}
                           </div>
                           <a 
-                            href={`https://www.google.com/finance/quote/${h.ticker}`} 
+                            href={`https://finance.yahoo.com/quote/${h.ticker}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center space-x-1 transition-all"
-                            title="View on Google Finance"
+                            title="View on Yahoo Finance"
                           >
                             <span>{h.ticker}</span>
                             <ExternalLink size={12} className="opacity-0 group-hover:opacity-40" />

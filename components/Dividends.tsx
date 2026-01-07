@@ -141,7 +141,7 @@ const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete }) => 
                   <td className="px-6 py-4 text-slate-600 text-sm">{d.date}</td>
                   <td className="px-6 py-4">
                     <a 
-                      href={`https://www.google.com/finance/quote/${d.ticker}`} 
+                      href={`https://finance.yahoo.com/quote/${d.ticker}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"

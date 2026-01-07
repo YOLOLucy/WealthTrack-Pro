@@ -25,12 +25,10 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastProcessedQuery = useRef<string>('');
 
-  // Sync internal query with external value
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  // Robust Debounce and Menu Management
   useEffect(() => {
     if (query.length < 2) {
       setSuggestions([]);
@@ -38,7 +36,6 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       return;
     }
 
-    // Force menu open when user is typing enough characters
     setIsOpen(true);
 
     const timer = setTimeout(() => {
@@ -52,14 +49,13 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   }, [query]);
 
   useEffect(() => {
-    // Pointer events handle both touch and mouse more reliably on modern iOS
+    // Pointer events handle both touch and mouse more reliably on modern iOS Safari
     const handleClickOutside = (event: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
     
-    // Using capture: true to ensure we handle the event before internal bubbling if needed
     document.addEventListener('pointerdown', handleClickOutside);
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
@@ -72,7 +68,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find 5 relevant stock tickers for: "${searchTerm}". Include global and regional (e.g., 2330.TW). Return JSON array of objects with ticker, name, exchange.`,
+        contents: `Find 5 relevant stock symbols compatible with Yahoo Finance for: "${searchTerm}". For non-US stocks, ensure correct Yahoo suffixes (e.g. 2330.TW for TSMC, 0005.HK for HSBC, 0050.TW). Return JSON array of objects with ticker, name, exchange.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -106,7 +102,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   };
 
   const selectSuggestion = (e: React.PointerEvent, s: Suggestion) => {
-    // Prevent default to avoid unexpected focus behaviors on iOS
+    // Critical for iOS Safari: prevent input blur and maintain selection context
     e.preventDefault();
     e.stopPropagation();
     
@@ -152,10 +148,10 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
           {loading && suggestions.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-500 flex flex-col items-center justify-center space-y-3">
               <Loader2 size={24} className="animate-spin text-blue-600" />
-              <span className="font-medium">Searching stock market...</span>
+              <span className="font-medium">Searching Yahoo Finance...</span>
             </div>
           ) : (
-            <div className="max-h-[300px] overflow-y-auto overscroll-contain">
+            <div className="max-h-[280px] overflow-y-auto overscroll-contain">
               {suggestions.map((s, idx) => (
                 <div
                   key={idx}

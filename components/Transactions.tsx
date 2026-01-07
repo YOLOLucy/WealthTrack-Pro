@@ -182,7 +182,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <a 
-                        href={`https://www.google.com/finance/quote/${t.ticker}`} 
+                        href={`https://finance.yahoo.com/quote/${t.ticker}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"
