@@ -108,6 +108,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
                 <Hash className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
                   type="number" step="any"
+                  inputMode="decimal"
                   value={formData.quantity}
                   onChange={e => setFormData({...formData, quantity: e.target.value})}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
@@ -120,6 +121,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
                 <DollarSign className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
                   type="number" step="any"
+                  inputMode="decimal"
                   value={formData.price}
                   onChange={e => setFormData({...formData, price: e.target.value})}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
@@ -132,6 +134,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
                 <DollarSign className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
                   type="number" step="any"
+                  inputMode="decimal"
                   value={formData.fees}
                   onChange={e => setFormData({...formData, fees: e.target.value})}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 

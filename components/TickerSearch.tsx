@@ -106,6 +106,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         <Tag className="absolute left-3 top-3 text-slate-400" size={18} />
         <input 
           type="text"
+          inputMode="decimal"
           placeholder={placeholder}
           value={query}
           onChange={handleInputChange}
