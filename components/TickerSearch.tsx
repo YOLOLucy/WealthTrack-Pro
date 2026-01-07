@@ -25,12 +25,10 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastProcessedQuery = useRef<string>('');
 
-  // Sync internal query with external value
   useEffect(() => {
     setQuery(value);
   }, [value]);
 
-  // Robust Debounce for Mobile
   useEffect(() => {
     if (query.length < 2) {
       setSuggestions([]);
@@ -38,7 +36,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       return;
     }
 
-    // Show loading/dropdown immediately on mobile for feedback
+    // Always keep open if there's enough text
     setIsOpen(true);
 
     const timer = setTimeout(() => {
@@ -46,20 +44,24 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         searchTickers(query);
         lastProcessedQuery.current = query;
       }
-    }, 600);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [query]);
 
   useEffect(() => {
-    // Using pointerdown for better mobile support (handles touch and mouse)
-    const handleClickOutside = (event: PointerEvent) => {
+    // Standard click-outside for general compatibility
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('pointerdown', handleClickOutside);
-    return () => document.removeEventListener('pointerdown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const searchTickers = async (searchTerm: string) => {
@@ -68,7 +70,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find the 5 most relevant stock ticker symbols for: "${searchTerm}". Include both global (e.g. AAPL) and regional stocks (e.g. 2330.TW). Return exactly 5 items.`,
+        contents: `Find 5 relevant stock tickers for: "${searchTerm}". Include global and regional (e.g., 2330.TW). Return JSON array of objects with ticker, name, exchange.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -101,7 +103,9 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
     onChange(val);
   };
 
-  const selectSuggestion = (s: Suggestion) => {
+  const selectSuggestion = (e: React.MouseEvent | React.TouchEvent, s: Suggestion) => {
+    // Critical for iOS: prevent input blur before selection
+    e.preventDefault();
     setQuery(s.ticker);
     onChange(s.ticker);
     if (onSelect) onSelect(s);
@@ -118,12 +122,13 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
           type="text"
           autoComplete="off"
           autoCorrect="off"
+          autoCapitalize="none"
           spellCheck="false"
           placeholder={placeholder}
           value={query}
           onChange={handleInputChange}
           onFocus={() => query.length >= 2 && setIsOpen(true)}
-          className={`w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:ring-2 ${ringClass} outline-none transition-all uppercase placeholder:normal-case text-base`}
+          className={`w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:ring-2 ${ringClass} outline-none transition-all uppercase placeholder:normal-case text-base bg-white`}
         />
         <div className="absolute right-3 top-3.5">
           {loading ? (
@@ -135,34 +140,34 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       </div>
 
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute left-0 right-0 z-[999] mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           {loading && suggestions.length === 0 ? (
-            <div className="p-5 text-center text-sm text-slate-500 flex items-center justify-center space-x-2">
-              <Loader2 size={16} className="animate-spin" />
-              <span>Searching...</span>
+            <div className="p-6 text-center text-sm text-slate-500 flex items-center justify-center space-x-3">
+              <Loader2 size={18} className="animate-spin text-blue-500" />
+              <span className="font-medium">Searching market...</span>
             </div>
           ) : (
             <div className="max-h-64 overflow-y-auto overscroll-contain">
               {suggestions.map((s, idx) => (
-                <button
+                <div
                   key={idx}
-                  type="button"
-                  onPointerDown={() => selectSuggestion(s)}
-                  className="w-full text-left px-5 py-4 hover:bg-slate-50 active:bg-slate-100 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors"
+                  onMouseDown={(e) => selectSuggestion(e, s)}
+                  onTouchStart={(e) => selectSuggestion(e, s)}
+                  className="w-full text-left px-5 py-4 hover:bg-slate-50 active:bg-slate-100 flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors cursor-pointer"
                 >
                   <div className="flex flex-col">
                     <span className="font-bold text-slate-900 text-base">{s.ticker}</span>
-                    <span className="text-xs text-slate-500 truncate max-w-[180px]">{s.name}</span>
+                    <span className="text-xs text-slate-500 truncate max-w-[160px]">{s.name}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.exchange}</span>
-                    {value === s.ticker && <Check size={16} className="text-emerald-500 mt-1" />}
+                    {value === s.ticker && <Check size={18} className="text-emerald-500 mt-1" />}
                   </div>
-                </button>
+                </div>
               ))}
               {suggestions.length === 0 && !loading && (
-                <div className="p-5 text-center text-sm text-slate-400 italic">
-                  No matches found.
+                <div className="p-6 text-center text-sm text-slate-400 italic">
+                  Keep typing to find tickers...
                 </div>
               )}
             </div>
