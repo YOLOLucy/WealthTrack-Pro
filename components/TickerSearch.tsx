@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
-import { Search, Loader2, Tag, Check, AlertCircle } from 'lucide-react';
+import { Search, Loader2, Tag, Check, AlertCircle, Key } from 'lucide-react';
 
 export interface Suggestion {
   ticker: string;
@@ -22,6 +22,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsKey, setNeedsKey] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastProcessedQuery = useRef<string>('');
@@ -63,18 +64,47 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
     };
   }, []);
 
+  const handleOpenKeySelector = async () => {
+    try {
+      // @ts-ignore - aistudio is injected globally and handled by the environment
+      if (window.aistudio) {
+        // @ts-ignore
+        await window.aistudio.openSelectKey();
+        setNeedsKey(false);
+        setError(null);
+        if (query.length >= 2) searchTickers(query);
+      }
+    } catch (e) {
+      console.error("Failed to open key selector", e);
+    }
+  };
+
   const searchTickers = async (searchTerm: string) => {
     if (!searchTerm || searchTerm.trim().length < 2) return;
     
     setLoading(true);
     setError(null);
+    setNeedsKey(false);
+
     try {
       const apiKey = process.env.API_KEY;
-      if (!apiKey || apiKey === 'undefined') {
-        throw new Error("API Key missing");
+      
+      // Check if we need to prompt for a key selection
+      if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+        // @ts-ignore
+        if (window.aistudio) {
+          // @ts-ignore
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          if (!hasKey) {
+            setNeedsKey(true);
+            setLoading(false);
+            return;
+          }
+        }
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      // Always create a new instance right before making an API call to ensure it uses the latest process.env.API_KEY
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const prompt = `Search for 5 stock symbols matching "${searchTerm}". 
       MUST be compatible with Yahoo Finance (e.g., 2330.TW, 0050.TW, 0700.HK, AAPL). 
       Return JSON array of objects with keys: ticker, name, exchange.`;
@@ -106,8 +136,11 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       setSuggestions(Array.isArray(results) ? results : []);
     } catch (err: any) {
       console.error("Ticker search failed:", err);
-      if (err.message?.includes("API Key")) {
-        setError("Configuration error (API Key)");
+      
+      // Specifically handle key-related or "not found" errors
+      if (err.message?.includes("not found") || err.message?.includes("404") || err.message?.includes("API Key") || err.message?.includes("403")) {
+        setNeedsKey(true);
+        setError("API Key required or invalid");
       } else {
         setError("Search service unreachable");
       }
@@ -153,7 +186,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         <div className="absolute right-3 top-3.5">
           {loading ? (
             <Loader2 size={18} className="animate-spin text-blue-500" />
-          ) : error ? (
+          ) : (error || needsKey) ? (
             <AlertCircle size={18} className="text-red-400" />
           ) : (
             <Search size={18} className="text-slate-300" />
@@ -171,10 +204,38 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
               <Loader2 size={24} className="animate-spin text-blue-600" />
               <span className="font-medium">Searching Yahoo Finance...</span>
             </div>
+          ) : needsKey ? (
+            <div className="p-8 text-center text-sm text-slate-600 flex flex-col items-center space-y-4">
+              <Key size={32} className="text-blue-500 mb-1" />
+              <div className="space-y-1">
+                <p className="font-bold">API Key Required</p>
+                <p className="text-xs text-slate-400">Please select a key from a paid project to enable search.</p>
+              </div>
+              <button 
+                onPointerDown={handleOpenKeySelector}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-700 transition-colors"
+              >
+                Select API Key
+              </button>
+              <a 
+                href="https://ai.google.dev/gemini-api/docs/billing" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-[10px] text-blue-500 hover:underline"
+              >
+                Learn about billing
+              </a>
+            </div>
           ) : error ? (
             <div className="p-6 text-center text-sm text-red-500 flex flex-col items-center space-y-2">
               <AlertCircle size={20} />
               <span className="font-medium">{error}</span>
+              <button 
+                onPointerDown={() => searchTickers(query)}
+                className="text-xs font-bold underline mt-2"
+              >
+                Retry
+              </button>
             </div>
           ) : (
             <div className="overflow-y-auto max-h-[310px] overscroll-contain">
