@@ -1,127 +1,110 @@
 
-import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import React from 'react';
 import { Holding, Transaction } from '../types';
-import { BrainCircuit, Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { PieChart, ShieldCheck, TrendingUp, AlertTriangle, Layers, Target } from 'lucide-react';
 
-interface AIInsightsProps {
+interface PortfolioAnalyticsProps {
   holdings: Holding[];
   transactions: Transaction[];
 }
 
-const AIInsights: React.FC<AIInsightsProps> = ({ holdings, transactions }) => {
-  const [insight, setInsight] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const PortfolioAnalytics: React.FC<PortfolioAnalyticsProps> = ({ holdings, transactions }) => {
+  const totalInvested = holdings.reduce((acc, h) => acc + h.totalInvested, 0);
+  const topHolding = holdings.length > 0 ? [...holdings].sort((a,b) => b.totalInvested - a.totalInvested)[0] : null;
+  const avgAllocation = holdings.length > 0 ? 100 / holdings.length : 0;
+  const maxAllocation = topHolding ? (topHolding.totalInvested / totalInvested) * 100 : 0;
 
-  const generateInsights = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `
-        As a senior financial advisor, analyze this investment portfolio:
-        Current Holdings: ${JSON.stringify(holdings.map(h => ({ ticker: h.ticker, totalInvested: h.totalInvested })))}
-        Total Transactions: ${transactions.length}
-        
-        Please provide:
-        1. A brief summary of the portfolio risk (diversification check).
-        2. Potential market sectors the user might be over-exposed or under-exposed to.
-        3. Strategic advice for the next quarter.
-        
-        Keep the response professional, concise, and in markdown format. 
-        Focus on these specific tickers if mentioned: ${holdings.map(h => h.ticker).join(', ')}.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
-
-      setInsight(response.text || "Sorry, I couldn't generate insights at this moment.");
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch AI insights. Please check your connection or try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (holdings.length === 0) {
+    return (
+      <div className="bg-slate-50 p-10 rounded-3xl border border-slate-200 border-dashed text-center">
+        <PieChart className="mx-auto text-slate-300 mb-4" size={48} />
+        <p className="text-slate-500 font-medium">Add transactions to generate portfolio analytics.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200">
-        <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2 bg-white/20 w-fit px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
-              <Sparkles size={14} />
-              <span>POWERED BY GEMINI AI</span>
-            </div>
-            <h2 className="text-3xl font-bold">Smart Portfolio Analysis</h2>
-            <p className="text-blue-100 max-w-md">
-              Get institutional-grade insights into your holdings. Our AI analyzes your transaction history and current allocation to provide strategic guidance.
-            </p>
-          </div>
-          <div className="hidden md:block">
-            <BrainCircuit size={80} className="text-white/20" />
-          </div>
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white shadow-xl">
+        <div className="flex items-center space-x-3 mb-6">
+          <Layers className="text-blue-400" size={24} />
+          <h2 className="text-2xl font-bold tracking-tight">Portfolio Health Report</h2>
         </div>
         
-        {!insight && !loading && (
-          <button 
-            onClick={generateInsights}
-            disabled={holdings.length === 0}
-            className="mt-8 bg-white text-blue-700 hover:bg-blue-50 px-8 py-3 rounded-xl font-bold transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Sparkles size={20} />
-            <span>Generate Insights Now</span>
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Health Index 1 */}
+          <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex items-start space-x-4">
+            <div className={`p-2 rounded-lg ${maxAllocation > 30 ? 'bg-orange-500/20 text-orange-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Concentration Risk</p>
+              <p className="text-lg font-bold mt-1">{maxAllocation > 30 ? 'Moderate' : 'Healthy'}</p>
+              <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                Largest position makes up {maxAllocation.toFixed(1)}% of your total capital.
+              </p>
+            </div>
+          </div>
+
+          {/* Health Index 2 */}
+          <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex items-start space-x-4">
+            <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
+              <TrendingUp size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Efficiency Score</p>
+              <p className="text-lg font-bold mt-1">{(100 - maxAllocation + avgAllocation).toFixed(0)} / 100</p>
+              <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                Calculated based on balance and asset count ({holdings.length} tickers).
+              </p>
+            </div>
+          </div>
+
+          {/* Health Index 3 */}
+          <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex items-start space-x-4">
+            <div className="p-2 bg-purple-500/20 text-purple-400 rounded-lg">
+              <Target size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Top Driver</p>
+              <p className="text-lg font-bold mt-1">{topHolding?.ticker}</p>
+              <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                Currently your primary source of equity exposure and dividends.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Warning Message */}
+        {maxAllocation > 40 && (
+          <div className="mt-8 flex items-center space-x-3 bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl text-orange-200 text-xs">
+            <AlertTriangle size={16} className="text-orange-500 flex-shrink-0" />
+            <p>Warning: High concentration in {topHolding?.ticker}. Consider diversifying to reduce specific asset risk.</p>
+          </div>
         )}
       </div>
 
-      {loading && (
-        <div className="bg-white p-12 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="animate-spin text-blue-600" size={40} />
-          <p className="text-slate-500 font-medium">Analyzing your market position...</p>
+      {/* Simple Data Summary */}
+      <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-sm grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Assets</p>
+          <p className="text-xl font-bold text-slate-900">{holdings.length}</p>
         </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 p-6 rounded-2xl border border-red-100 flex items-center space-x-3 text-red-600">
-          <AlertCircle size={20} />
-          <span>{error}</span>
-          <button onClick={generateInsights} className="ml-auto underline font-bold">Try again</button>
+        <div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg. Allocation</p>
+          <p className="text-xl font-bold text-slate-900">{avgAllocation.toFixed(1)}%</p>
         </div>
-      )}
-
-      {insight && !loading && (
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm relative group">
-          <button 
-            onClick={generateInsights}
-            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-            title="Regenerate Insights"
-          >
-            <RefreshCw size={20} />
-          </button>
-          
-          <div className="prose prose-slate max-w-none">
-             <div className="flex items-center space-x-2 text-blue-600 mb-6">
-                <BrainCircuit size={24} />
-                <h3 className="text-xl font-bold m-0">Advisor's Report</h3>
-             </div>
-             <div className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-               {insight}
-             </div>
-          </div>
+        <div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Max Weight</p>
+          <p className="text-xl font-bold text-slate-900">{maxAllocation.toFixed(1)}%</p>
         </div>
-      )}
-      
-      {holdings.length === 0 && (
-         <div className="bg-slate-50 p-12 rounded-3xl border border-slate-200 border-dashed text-center">
-            <p className="text-slate-500 font-medium">Add some holdings to get started with AI Analysis.</p>
-         </div>
-      )}
+        <div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Activity</p>
+          <p className="text-xl font-bold text-slate-900">{transactions.length} Trades</p>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default AIInsights;
+export default PortfolioAnalytics;
