@@ -45,7 +45,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         searchTickers(query);
         lastProcessedQuery.current = query;
       }
-    }, 700); // Increased debounce for better stability
+    }, 700);
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -64,15 +64,24 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   }, []);
 
   const searchTickers = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.trim().length < 2) return;
+    
     setLoading(true);
     setError(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = process.env.API_KEY;
+      if (!apiKey || apiKey === 'undefined') {
+        throw new Error("API Key missing");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const prompt = `Search for 5 stock symbols matching "${searchTerm}". 
+      MUST be compatible with Yahoo Finance (e.g., 2330.TW, 0050.TW, 0700.HK, AAPL). 
+      Return JSON array of objects with keys: ticker, name, exchange.`;
+
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find 5 relevant stock symbols compatible with Yahoo Finance for: "${searchTerm}". 
-        CRITICAL: For non-US stocks, use Yahoo suffixes (e.g. 2330.TW, 0050.TW, 0700.HK, 0001.HK). 
-        Return ONLY a JSON array of objects with keys: ticker, name, exchange.`,
+        contents: [{ parts: [{ text: prompt }] }],
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -90,14 +99,18 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         }
       });
 
-      const rawText = response.text || "[]";
-      // Clean potential markdown or extra characters
-      const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-      const results = JSON.parse(cleanJson);
+      const text = response.text;
+      if (!text) throw new Error("Empty response");
+      
+      const results = JSON.parse(text);
       setSuggestions(Array.isArray(results) ? results : []);
-    } catch (error) {
-      console.error("Ticker search error:", error);
-      setError("Search failed. Check connection.");
+    } catch (err: any) {
+      console.error("Ticker search failed:", err);
+      if (err.message?.includes("API Key")) {
+        setError("Configuration error (API Key)");
+      } else {
+        setError("Search service unreachable");
+      }
     } finally {
       setLoading(false);
     }
@@ -183,7 +196,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
               ))}
               {suggestions.length === 0 && !loading && !error && (
                 <div className="p-8 text-center text-sm text-slate-400 italic">
-                  Type more to find stocks...
+                  No matches found. Try again.
                 </div>
               )}
             </div>
