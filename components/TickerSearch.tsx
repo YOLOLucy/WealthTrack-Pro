@@ -24,9 +24,25 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Sync internal query with external value (e.g. when form resets)
   useEffect(() => {
     setQuery(value);
   }, [value]);
+
+  // Proper Debounce Implementation using useEffect
+  useEffect(() => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      setIsOpen(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchTickers(query);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -39,11 +55,6 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   }, []);
 
   const searchTickers = async (searchTerm: string) => {
-    if (searchTerm.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
     setLoading(true);
     setIsOpen(true);
 
@@ -51,7 +62,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find the 5 most relevant stock ticker symbols for the search query: "${searchTerm}". Include both global and regional stocks if applicable.`,
+        contents: `Find the 5 most relevant stock ticker symbols for the search query: "${searchTerm}". Include both global (e.g. AAPL) and regional stocks (e.g. 2330.TW or 2330). Return exactly 5 items.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -59,9 +70,9 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
             items: {
               type: Type.OBJECT,
               properties: {
-                ticker: { type: Type.STRING, description: "The stock ticker symbol (e.g., AAPL, 2330.TW)" },
-                name: { type: Type.STRING, description: "The full company name" },
-                exchange: { type: Type.STRING, description: "The exchange name (e.g., NASDAQ, NYSE, TWSE)" }
+                ticker: { type: Type.STRING, description: "The stock ticker symbol" },
+                name: { type: Type.STRING, description: "Full company name" },
+                exchange: { type: Type.STRING, description: "Exchange name" }
               },
               required: ["ticker", "name", "exchange"]
             }
@@ -73,7 +84,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       setSuggestions(results);
     } catch (error) {
       console.error("Ticker search error:", error);
-      setSuggestions([]);
+      // Fallback or empty state
     } finally {
       setLoading(false);
     }
@@ -82,13 +93,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    onChange(val);
-    
-    // Simple debounce/delay logic
-    const timeoutId = setTimeout(() => {
-      if (val === e.target.value) searchTickers(val);
-    }, 600);
-    return () => clearTimeout(timeoutId);
+    onChange(val); // Update parent state immediately for binding
   };
 
   const selectSuggestion = (s: Suggestion) => {
@@ -139,7 +144,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
                 >
                   <div className="flex flex-col">
                     <span className="font-bold text-slate-900">{s.ticker}</span>
-                    <span className="text-xs text-slate-500 truncate max-w-[220px]">{s.name}</span>
+                    <span className="text-xs text-slate-500 truncate max-w-[200px]">{s.name}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.exchange}</span>
@@ -147,6 +152,11 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
                   </div>
                 </button>
               ))}
+              {suggestions.length === 0 && !loading && (
+                <div className="p-4 text-center text-sm text-slate-400 italic">
+                  No results found. Keep typing...
+                </div>
+              )}
             </div>
           )}
         </div>
