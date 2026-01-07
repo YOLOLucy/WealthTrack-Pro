@@ -43,13 +43,13 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
         searchTickers(query);
         lastProcessedQuery.current = query;
       }
-    }, 500);
+    }, 600); // Slightly longer debounce for reliability
 
     return () => clearTimeout(timer);
   }, [query]);
 
   useEffect(() => {
-    // Pointer events handle both touch and mouse more reliably on modern iOS Safari
+    // Handling click/touch outside to close dropdown
     const handleClickOutside = (event: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -68,7 +68,9 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Find 5 relevant stock symbols compatible with Yahoo Finance for: "${searchTerm}". For non-US stocks, ensure correct Yahoo suffixes (e.g. 2330.TW for TSMC, 0005.HK for HSBC, 0050.TW). Return JSON array of objects with ticker, name, exchange.`,
+        contents: `Find 5 relevant stock symbols compatible with Yahoo Finance for: "${searchTerm}". 
+        CRITICAL: For non-US stocks, use Yahoo suffixes (e.g. 2330.TW for TSMC, 0050.TW for Yuanta, 0700.HK for Tencent). 
+        Return ONLY a JSON array of objects with keys: ticker, name, exchange.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -102,7 +104,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   };
 
   const selectSuggestion = (e: React.PointerEvent, s: Suggestion) => {
-    // Critical for iOS Safari: prevent input blur and maintain selection context
+    // Important for iOS: stop default event to prevent keyboard flash or blur issues
     e.preventDefault();
     e.stopPropagation();
     
@@ -115,7 +117,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const ringClass = accentColor === 'emerald' ? 'focus:ring-emerald-500' : 'focus:ring-blue-500';
 
   return (
-    <div className="relative w-full" ref={dropdownRef} style={{ touchAction: 'pan-y' }}>
+    <div className="relative w-full" ref={dropdownRef}>
       <div className="relative">
         <Tag className="absolute left-3 top-3 text-slate-400" size={18} />
         <input 
@@ -128,7 +130,6 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
           value={query}
           onChange={handleInputChange}
           onFocus={() => query.length >= 2 && setIsOpen(true)}
-          onClick={() => query.length >= 2 && setIsOpen(true)}
           className={`w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:ring-2 ${ringClass} outline-none transition-all uppercase placeholder:normal-case text-base bg-white shadow-sm`}
         />
         <div className="absolute right-3 top-3.5">
@@ -143,7 +144,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       {isOpen && (
         <div 
           className="absolute left-0 right-0 z-[9999] mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-          onPointerDown={(e) => e.stopPropagation()}
+          style={{ maxHeight: '300px' }}
         >
           {loading && suggestions.length === 0 ? (
             <div className="p-8 text-center text-sm text-slate-500 flex flex-col items-center justify-center space-y-3">
@@ -151,7 +152,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
               <span className="font-medium">Searching Yahoo Finance...</span>
             </div>
           ) : (
-            <div className="max-h-[280px] overflow-y-auto overscroll-contain">
+            <div className="overflow-y-auto max-h-[290px] overscroll-contain">
               {suggestions.map((s, idx) => (
                 <div
                   key={idx}
@@ -160,7 +161,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
                 >
                   <div className="flex flex-col">
                     <span className="font-bold text-slate-900 text-base">{s.ticker}</span>
-                    <span className="text-xs text-slate-500 truncate max-w-[180px]">{s.name}</span>
+                    <span className="text-xs text-slate-500 truncate max-w-[160px]">{s.name}</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.exchange}</span>
@@ -170,7 +171,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
               ))}
               {suggestions.length === 0 && !loading && (
                 <div className="p-8 text-center text-sm text-slate-400 italic">
-                  Keep typing to lookup stocks...
+                  No Yahoo Finance results found.
                 </div>
               )}
             </div>
