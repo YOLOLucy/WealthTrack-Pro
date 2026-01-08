@@ -12,6 +12,7 @@ export interface Suggestion {
 const LOCAL_STOCKS: Suggestion[] = [
   { ticker: '2330.TW', name: '台積電 (TSMC)', exchange: 'TWSE' },
   { ticker: '0050.TW', name: '元大台灣50', exchange: 'TWSE' },
+  { ticker: '006208.TW', name: '富邦台灣采吉50', exchange: 'TWSE' },
   { ticker: '00830.TW', name: '國泰費城半導體', exchange: 'TWSE' },
   { ticker: '2317.TW', name: '鴻海 (Foxconn)', exchange: 'TWSE' },
   { ticker: '2412.TW', name: '中華電信', exchange: 'TWSE' },
