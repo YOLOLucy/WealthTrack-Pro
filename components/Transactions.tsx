@@ -22,9 +22,41 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
     fees: '0'
   });
 
+  const evaluateMath = (value: string): string => {
+    if (!value) return '';
+    // If it's just a number, return it
+    if (/^-?\d*\.?\d*$/.test(value)) return value;
+    
+    try {
+      // Clean input: allow only numbers and + - * / . ( )
+      const cleaned = value.replace(/[^-0-9+*/.()]/g, '');
+      if (!cleaned) return value;
+      
+      // Use Function constructor for safe simple math evaluation
+      const result = new Function(`return (${cleaned})`)();
+      return isFinite(result) ? result.toString() : value;
+    } catch {
+      return value;
+    }
+  };
+
+  const handleBlur = (field: 'quantity' | 'price' | 'fees') => {
+    const val = formData[field];
+    if (val.includes('+') || val.includes('-') || val.includes('*') || val.includes('/')) {
+      const calculated = evaluateMath(val);
+      setFormData(prev => ({ ...prev, [field]: calculated }));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.ticker || !formData.quantity || !formData.price) return;
+    
+    // Evaluate math one last time before saving
+    const finalQty = evaluateMath(formData.quantity);
+    const finalPrice = evaluateMath(formData.price);
+    const finalFees = evaluateMath(formData.fees);
+
+    if (!formData.ticker || !finalQty || !finalPrice) return;
 
     onAdd({
       id: Date.now().toString(),
@@ -32,9 +64,9 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
       ticker: formData.ticker.toUpperCase(),
       name: formData.name || formData.ticker.toUpperCase(),
       type: formData.type,
-      quantity: parseFloat(formData.quantity),
-      price: parseFloat(formData.price),
-      fees: parseFloat(formData.fees || '0')
+      quantity: parseFloat(finalQty),
+      price: parseFloat(finalPrice),
+      fees: parseFloat(finalFees || '0')
     });
     
     setFormData({
@@ -107,10 +139,12 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               <div className="relative">
                 <Hash className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
-                  type="number" step="any"
-                  inputMode="decimal"
+                  type="text"
+                  inputMode="text"
+                  placeholder="Supports math e.g. 100+50"
                   value={formData.quantity}
                   onChange={e => setFormData({...formData, quantity: e.target.value})}
+                  onBlur={() => handleBlur('quantity')}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
               </div>
@@ -120,10 +154,12 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
-                  type="number" step="any"
-                  inputMode="decimal"
+                  type="text"
+                  inputMode="text"
+                  placeholder="Supports math e.g. 150*1.02"
                   value={formData.price}
                   onChange={e => setFormData({...formData, price: e.target.value})}
+                  onBlur={() => handleBlur('price')}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
               </div>
@@ -133,10 +169,12 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
-                  type="number" step="any"
-                  inputMode="decimal"
+                  type="text"
+                  inputMode="text"
+                  placeholder="Supports math e.g. 50+20"
                   value={formData.fees}
                   onChange={e => setFormData({...formData, fees: e.target.value})}
+                  onBlur={() => handleBlur('fees')}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
                 />
               </div>
@@ -150,6 +188,9 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               </button>
             </div>
           </form>
+          <p className="mt-4 text-[10px] text-slate-400 italic text-center">
+            Tip: You can use + - * / in Quantity, Price, and Fees. They will auto-calculate when you switch fields.
+          </p>
         </div>
       ) : (
         <button 
