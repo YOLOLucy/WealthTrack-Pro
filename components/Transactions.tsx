@@ -112,7 +112,18 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Ticker Symbol (Auto-lookup)</label>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-semibold text-slate-700">Ticker Symbol (Auto-lookup)</label>
+                <a 
+                  href="https://www.google.com/finance" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors w-fit"
+                >
+                  <span>連結至google finance 可以查到股票代號</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
               <TickerSearch 
                 value={formData.ticker}
                 onChange={(val) => setFormData({...formData, ticker: val})}

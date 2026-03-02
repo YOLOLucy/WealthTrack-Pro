@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Tag, Check, HelpCircle } from 'lucide-react';
+import Fuse from 'fuse.js';
 
 export interface Suggestion {
   ticker: string;
@@ -12,11 +13,15 @@ export interface Suggestion {
 const LOCAL_STOCKS: Suggestion[] = [
   { ticker: '2330.TW', name: '台積電 (TSMC)', exchange: 'TWSE' },
   { ticker: '0050.TW', name: '元大台灣50', exchange: 'TWSE' },
+  { ticker: '0056.TW', name: '元大高股息', exchange: 'TWSE' },
+  { ticker: '00878.TW', name: '國泰永續高股息', exchange: 'TWSE' },
   { ticker: '006208.TW', name: '富邦台灣采吉50', exchange: 'TWSE' },
   { ticker: '00830.TW', name: '國泰費城半導體', exchange: 'TWSE' },
   { ticker: '2317.TW', name: '鴻海 (Foxconn)', exchange: 'TWSE' },
   { ticker: '2412.TW', name: '中華電信', exchange: 'TWSE' },
   { ticker: '2454.TW', name: '聯發科', exchange: 'TWSE' },
+  { ticker: '2881.TW', name: '富邦金', exchange: 'TWSE' },
+  { ticker: '2882.TW', name: '國泰金', exchange: 'TWSE' },
   { ticker: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' },
   { ticker: 'TSLA', name: 'Tesla, Inc.', exchange: 'NASDAQ' },
   { ticker: 'NVDA', name: 'NVIDIA Corporation', exchange: 'NASDAQ' },
@@ -24,8 +29,12 @@ const LOCAL_STOCKS: Suggestion[] = [
   { ticker: 'GOOGL', name: 'Alphabet Inc.', exchange: 'NASDAQ' },
   { ticker: 'AMZN', name: 'Amazon.com, Inc.', exchange: 'NASDAQ' },
   { ticker: 'META', name: 'Meta Platforms', exchange: 'NASDAQ' },
+  { ticker: 'NFLX', name: 'Netflix, Inc.', exchange: 'NASDAQ' },
+  { ticker: 'AMD', name: 'Advanced Micro Devices', exchange: 'NASDAQ' },
+  { ticker: 'INTC', name: 'Intel Corporation', exchange: 'NASDAQ' },
   { ticker: '0700.HK', name: '騰訊控股', exchange: 'HKEX' },
-  { ticker: '9988.HK', name: '阿里巴巴', exchange: 'HKEX' }
+  { ticker: '9988.HK', name: '阿里巴巴', exchange: 'HKEX' },
+  { ticker: '3690.HK', name: '美團', exchange: 'HKEX' }
 ];
 
 interface TickerSearchProps {
@@ -42,6 +51,13 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const fuse = useMemo(() => new Fuse(LOCAL_STOCKS, {
+    keys: ['ticker', 'name'],
+    threshold: 0.4, // Adjust for fuzziness
+    distance: 100,
+    minMatchCharLength: 1
+  }), []);
+
   useEffect(() => {
     setQuery(value);
   }, [value]);
@@ -53,14 +69,12 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ value, onChange, onSelect, 
       return;
     }
 
-    const filtered = LOCAL_STOCKS.filter(s => 
-      s.ticker.toLowerCase().includes(query.toLowerCase()) || 
-      s.name.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 8);
+    const results = fuse.search(query);
+    const filtered = results.map(r => r.item).slice(0, 8);
 
     setSuggestions(filtered);
     setIsOpen(filtered.length > 0);
-  }, [query]);
+  }, [query, fuse]);
 
   useEffect(() => {
     const handleClickOutside = (event: PointerEvent) => {
