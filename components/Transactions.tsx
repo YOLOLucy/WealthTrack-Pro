@@ -8,9 +8,10 @@ interface TransactionsProps {
   transactions: Transaction[];
   onAdd: (t: Transaction) => void;
   onDelete: (id: string) => void;
+  onDeleteAll: () => void;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDelete }) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDelete, onDeleteAll }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -204,13 +205,23 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
           </p>
         </div>
       ) : (
-        <button 
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all shadow-sm"
-        >
-          <Plus size={20} />
-          <span className="font-semibold">Add New Transaction</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowForm(true)}
+            className="flex items-center space-x-2 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all shadow-sm"
+          >
+            <Plus size={20} />
+            <span className="font-semibold">Add New Transaction</span>
+          </button>
+          
+          <button 
+            onClick={onDeleteAll}
+            className="flex items-center space-x-2 bg-red-50 text-red-600 px-6 py-3 rounded-xl hover:bg-red-100 transition-all border border-red-100"
+          >
+            <Trash2 size={20} />
+            <span className="font-semibold">Delete All</span>
+          </button>
+        </div>
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">

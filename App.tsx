@@ -9,7 +9,8 @@ import {
   PlusCircle, 
   Menu, 
   TrendingUp,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -126,6 +127,11 @@ const AppContent = () => {
 
   const addTransaction = (t: Transaction) => setTransactions(prev => [...prev, t]);
   const removeTransaction = (id: string) => setTransactions(prev => prev.filter(t => t.id !== id));
+  const clearTransactions = () => {
+    if (window.confirm('Are you sure you want to delete all transactions?')) {
+      setTransactions([]);
+    }
+  };
   
   const addDividend = (d: Dividend) => setDividends(prev => [...prev, d]);
   const removeDividend = (id: string) => setDividends(prev => prev.filter(d => d.id !== id));
@@ -194,6 +200,15 @@ const AppContent = () => {
             </h2>
           </div>
           <div className="flex items-center space-x-3">
+             {location.pathname === '/transactions' && (
+               <button 
+                  onClick={clearTransactions}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 border border-red-100 transition-all"
+               >
+                 <Trash2 size={18} />
+                 <span className="hidden sm:inline">Delete All</span>
+               </button>
+             )}
              <Link 
                 to="/transactions" 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 shadow-sm transition-all"
@@ -211,7 +226,7 @@ const AppContent = () => {
               path="/portfolio" 
               element={<Portfolio holdings={holdings} onUpdateEstimate={updateDividendEstimate} />} 
             />
-            <Route path="/transactions" element={<Transactions transactions={transactions} onAdd={addTransaction} onDelete={removeTransaction} />} />
+            <Route path="/transactions" element={<Transactions transactions={transactions} onAdd={addTransaction} onDelete={removeTransaction} onDeleteAll={clearTransactions} />} />
             <Route path="/dividends" element={<Dividends dividends={dividends} onAdd={addDividend} onDelete={removeDividend} />} />
             <Route 
               path="/data" 
