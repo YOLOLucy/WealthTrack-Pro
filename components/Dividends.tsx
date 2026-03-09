@@ -8,9 +8,10 @@ interface DividendsProps {
   dividends: Dividend[];
   onAdd: (d: Dividend) => void;
   onDelete: (id: string) => void;
+  onDeleteAll: () => void;
 }
 
-const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete }) => {
+const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete, onDeleteAll }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -52,13 +53,23 @@ const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete }) => 
            <p className="text-slate-500 text-sm">Monitor your passive income stream</p>
         </div>
         {!showForm && (
-          <button 
-            onClick={() => setShowForm(true)}
-            className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-sm"
-          >
-            <Plus size={20} />
-            <span className="font-semibold">Record Dividend</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setShowForm(true)}
+              className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-sm"
+            >
+              <Plus size={20} />
+              <span className="font-semibold">Record Dividend</span>
+            </button>
+            
+            <button 
+              onClick={onDeleteAll}
+              className="flex items-center space-x-2 bg-red-50 text-red-600 px-6 py-3 rounded-xl hover:bg-red-100 transition-all border border-red-100"
+            >
+              <Trash2 size={20} />
+              <span className="font-semibold">Delete All</span>
+            </button>
+          </div>
         )}
       </div>
 
