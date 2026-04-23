@@ -41,11 +41,44 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
     }
   };
 
+  const calculateTWSEFee = () => {
+    const finalQty = evaluateMath(formData.quantity);
+    const finalPrice = evaluateMath(formData.price);
+    const qty = parseFloat(finalQty);
+    const price = parseFloat(finalPrice);
+    
+    if (isNaN(qty) || isNaN(price) || qty <= 0 || price <= 0) return;
+
+    const tradeValue = qty * price;
+    // Standard TWSE commission is 0.1425%, min 20 TWD
+    const commission = Math.max(20, Math.floor(tradeValue * 0.001425));
+    // Securities Transaction Tax is 0.3% for SELL only
+    const tax = formData.type === TransactionType.SELL ? Math.floor(tradeValue * 0.003) : 0;
+    
+    setFormData(prev => ({ ...prev, fees: (commission + tax).toString() }));
+  };
+
   const handleBlur = (field: 'quantity' | 'price' | 'fees') => {
-    const val = formData[field];
-    if (val.includes('+') || val.includes('-') || val.includes('*') || val.includes('/')) {
-      const calculated = evaluateMath(val);
-      setFormData(prev => ({ ...prev, [field]: calculated }));
+    let currentVal = formData[field];
+    if (currentVal.includes('+') || currentVal.includes('-') || currentVal.includes('*') || currentVal.includes('/')) {
+      currentVal = evaluateMath(currentVal);
+      setFormData(prev => ({ ...prev, [field]: currentVal }));
+    }
+    
+    // Auto-calculate TWSE fees if currently 0 or empty when blurring quantity/price
+    if ((field === 'quantity' || field === 'price') && (formData.fees === '0' || !formData.fees)) {
+      const q = field === 'quantity' ? currentVal : formData.quantity;
+      const p = field === 'price' ? currentVal : formData.price;
+      
+      const qty = parseFloat(evaluateMath(q));
+      const price = parseFloat(evaluateMath(p));
+      
+      if (!isNaN(qty) && !isNaN(price) && qty > 0 && price > 0) {
+        const tradeValue = qty * price;
+        const commission = Math.max(20, Math.floor(tradeValue * 0.001425));
+        const tax = formData.type === TransactionType.SELL ? Math.floor(tradeValue * 0.003) : 0;
+        setFormData(prev => ({ ...prev, fees: (commission + tax).toString() }));
+      }
     }
   };
 
@@ -139,7 +172,24 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               <label className="text-sm font-semibold text-slate-700">Type</label>
               <select 
                 value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value as TransactionType})}
+                onChange={e => {
+                  const newType = e.target.value as TransactionType;
+                  setFormData(prev => {
+                    const newState = { ...prev, type: newType };
+                    
+                    // If we have values, recalculate fees based on new type (e.g. adding tax for SELL)
+                    const qty = parseFloat(evaluateMath(prev.quantity));
+                    const price = parseFloat(evaluateMath(prev.price));
+                    if (!isNaN(qty) && !isNaN(price) && qty > 0 && price > 0) {
+                      const tradeValue = qty * price;
+                      const commission = Math.max(20, Math.floor(tradeValue * 0.001425));
+                      const tax = newType === TransactionType.SELL ? Math.floor(tradeValue * 0.003) : 0;
+                      newState.fees = (commission + tax).toString();
+                    }
+                    
+                    return newState;
+                  });
+                }}
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white transition-all"
               >
                 <option value={TransactionType.BUY}>Buy</option>
@@ -177,7 +227,17 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Fees</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-700">Fees</label>
+                <button 
+                  type="button"
+                  onClick={calculateTWSEFee}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 transition-colors"
+                  title="Auto-calculate using TWSE formula (Commission + Tax)"
+                >
+                  Calc TWSE Fees
+                </button>
+              </div>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3 text-slate-400" size={18} />
                 <input 
@@ -201,7 +261,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
             </div>
           </form>
           <p className="mt-4 text-[10px] text-slate-400 italic text-center">
-            Tip: You can use + - * / in Quantity, Price, and Fees. They will auto-calculate when you switch fields.
+            Tip: You can use + - * / in Quantity, Price, and Fees. Click "Calc TWSE Fees" to apply standard TWSE logic (0.1425% commission, 0.3% tax for sells).
           </p>
         </div>
       ) : (
