@@ -10,7 +10,8 @@ import {
   Menu, 
   TrendingUp,
   Database,
-  Trash2
+  Trash2,
+  CalendarDays
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -65,6 +66,7 @@ const AppContent = () => {
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>('All');
   const location = useLocation();
 
   useEffect(() => {
@@ -72,6 +74,29 @@ const AppContent = () => {
     localStorage.setItem('wt_dividends', JSON.stringify(dividends));
     localStorage.setItem('wt_div_estimates', JSON.stringify(dividendEstimates));
   }, [transactions, dividends, dividendEstimates]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    transactions.forEach(t => {
+      const yr = t.date.split('-')[0];
+      if (yr) years.add(yr);
+    });
+    dividends.forEach(d => {
+      const yr = d.date.split('-')[0];
+      if (yr) years.add(yr);
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [transactions, dividends]);
+
+  const filteredTransactions = useMemo(() => {
+    if (selectedYear === 'All') return transactions;
+    return transactions.filter(t => t.date.startsWith(selectedYear));
+  }, [transactions, selectedYear]);
+
+  const filteredDividends = useMemo(() => {
+    if (selectedYear === 'All') return dividends;
+    return dividends.filter(d => d.date.startsWith(selectedYear));
+  }, [dividends, selectedYear]);
 
   const updateDividendEstimate = (ticker: string, value: number) => {
     setDividendEstimates(prev => ({
@@ -205,6 +230,21 @@ const AppContent = () => {
             </h2>
           </div>
           <div className="flex items-center space-x-3">
+             {availableYears.length > 0 && (
+               <div className="relative flex items-center bg-white border border-slate-200 rounded-lg pr-3 pl-3 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
+                 <CalendarDays size={16} className="text-slate-400 mr-2" />
+                 <select 
+                    value={selectedYear} 
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[60px]"
+                 >
+                   <option value="All">All Years</option>
+                   {availableYears.map(yr => (
+                     <option key={yr} value={yr}>{yr}</option>
+                   ))}
+                 </select>
+               </div>
+             )}
              {location.pathname === '/transactions' && (
                <button 
                   onClick={clearTransactions}
@@ -235,13 +275,13 @@ const AppContent = () => {
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           <Routes>
-            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} />} />
+            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} selectedYear={selectedYear} />} />
             <Route 
               path="/portfolio" 
               element={<Portfolio holdings={holdings} onUpdateEstimate={updateDividendEstimate} />} 
             />
-            <Route path="/transactions" element={<Transactions transactions={transactions} onAdd={addTransaction} onDelete={removeTransaction} onDeleteAll={clearTransactions} />} />
-            <Route path="/dividends" element={<Dividends dividends={dividends} onAdd={addDividend} onDelete={removeDividend} onDeleteAll={clearDividends} />} />
+            <Route path="/transactions" element={<Transactions transactions={filteredTransactions} onAdd={addTransaction} onDelete={removeTransaction} onDeleteAll={clearTransactions} />} />
+            <Route path="/dividends" element={<Dividends dividends={filteredDividends} onAdd={addDividend} onDelete={removeDividend} onDeleteAll={clearDividends} />} />
             <Route 
               path="/data" 
               element={

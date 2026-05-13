@@ -25,6 +25,7 @@ interface DashboardProps {
   holdings: Holding[];
   transactions: Transaction[];
   dividends: Dividend[];
+  selectedYear: string;
 }
 
 const StatCard = ({ title, value, subValue, icon: Icon, colorClass }: any) => (
@@ -51,12 +52,8 @@ const getYearFromDate = (dateStr: string) => {
   return match ? match[0] : new Date().getFullYear().toString();
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends }) => {
-  const currentYear = new Date().getFullYear().toString();
-  const prevYear = (new Date().getFullYear() - 1).toString();
-  const monthsPassed = new Date().getMonth() + 1;
-
-  const { yearlyData, currentYearStats, prevYearStats, totalStats } = useMemo(() => {
+const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear }) => {
+  const { yearlyData, currentYearStats, prevYearStats, totalStats, targetYear, comparisonYear } = useMemo(() => {
     const years: Record<string, { dividend: number; capitalGain: number }> = {};
     let allTimeRealizedGain = 0;
     let allTimeDividends = 0;
@@ -69,6 +66,11 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
       const yr = getYearFromDate(d.date);
       if (!years[yr]) years[yr] = { dividend: 0, capitalGain: 0 };
     });
+
+    const availableYears = Object.keys(years).sort();
+    const latestYearInData = availableYears.length > 0 ? availableYears[availableYears.length - 1] : new Date().getFullYear().toString();
+    const targetYear = selectedYear === 'All' ? latestYearInData : selectedYear;
+    const comparisonYear = (parseInt(targetYear) - 1).toString();
 
     const sortedTx = [...transactions].sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -107,8 +109,8 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
     });
 
     let runningTotalProfit = 0;
-    const sortedYears = Object.keys(years).sort();
-    const yearlyDataArray = sortedYears.map(yr => {
+    const sortedYearsList = Object.keys(years).sort();
+    const yearlyDataArray = sortedYearsList.map(yr => {
       runningTotalProfit += (years[yr].dividend + years[yr].capitalGain);
       return {
         year: yr,
@@ -120,17 +122,21 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
 
     return { 
       yearlyData: yearlyDataArray,
-      currentYearStats: years[currentYear] || { dividend: 0, capitalGain: 0 },
-      prevYearStats: years[prevYear] || { dividend: 0, capitalGain: 0 },
-      totalStats: { dividend: allTimeDividends, capitalGain: allTimeRealizedGain }
+      currentYearStats: years[targetYear] || { dividend: 0, capitalGain: 0 },
+      prevYearStats: years[comparisonYear] || { dividend: 0, capitalGain: 0 },
+      totalStats: { dividend: allTimeDividends, capitalGain: allTimeRealizedGain },
+      targetYear,
+      comparisonYear
     };
-  }, [dividends, transactions, currentYear, prevYear]);
+  }, [dividends, transactions, selectedYear]);
 
   const divGrowth = prevYearStats.dividend > 0 
     ? ((currentYearStats.dividend - prevYearStats.dividend) / prevYearStats.dividend * 100) 
     : 0;
   
-  const monthlyAvgCombined = (currentYearStats.dividend + currentYearStats.capitalGain) / monthsPassed;
+  const isTargetCurrentYear = targetYear === new Date().getFullYear().toString();
+  const divisor = isTargetCurrentYear ? (new Date().getMonth() + 1) : 12;
+  const monthlyAvgCombined = (currentYearStats.dividend + currentYearStats.capitalGain) / divisor;
 
   const allocationData = useMemo(() => {
     return holdings.map(h => ({
@@ -146,13 +152,13 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         <StatCard 
           title="Dividend Growth" 
           value={`${divGrowth >= 0 ? '+' : ''}${divGrowth.toFixed(1)}%`}
-          subValue={`YoY vs ${prevYear}`}
+          subValue={`YoY vs ${comparisonYear}`}
           icon={Percent}
           colorClass="bg-blue-50 text-blue-600"
         />
         
         <StatCard 
-          title={`${currentYear} Dividends`} 
+          title={`${targetYear} Dividends`} 
           value={`$${currentYearStats.dividend.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           subValue={`Lifetime: $${totalStats.dividend.toLocaleString()}`}
           icon={DollarSign}
@@ -160,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         />
 
         <StatCard 
-          title={`${currentYear} Realized Gains`} 
+          title={`${targetYear} Realized Gains`} 
           value={`$${currentYearStats.capitalGain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           subValue={`Lifetime: $${totalStats.capitalGain.toLocaleString()}`}
           icon={TrendingUp}
@@ -170,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         <StatCard 
           title="Monthly Average" 
           value={`$${monthlyAvgCombined.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-          subValue="Current Year Avg (D+G)"
+          subValue={`${targetYear} Avg (D+G)`}
           icon={BarChart3}
           colorClass="bg-purple-50 text-purple-600"
         />
