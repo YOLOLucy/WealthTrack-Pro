@@ -160,6 +160,14 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
     return dividends.filter(d => d.date.startsWith(selectedYear));
   }, [dividends, selectedYear]);
 
+  const totalFilteredDividends = useMemo(() => {
+    return filteredDividendsDetail.reduce((sum, d) => sum + d.amount, 0);
+  }, [filteredDividendsDetail]);
+
+  const totalFilteredTransactions = useMemo(() => {
+    return filteredTransactionsDetail.reduce((sum, t) => sum + (t.quantity * t.price), 0);
+  }, [filteredTransactionsDetail]);
+
   return (
     <div className="space-y-8 pb-20">
       {/* Summary Cards */}
@@ -286,6 +294,15 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {filteredDividendsDetail.length > 0 && (
+                  <tr className="bg-emerald-50/30 font-bold border-b-2 border-emerald-100">
+                    <td className="px-6 py-4 text-emerald-800 text-sm">TOTAL</td>
+                    <td className="px-6 py-4 text-emerald-800 text-sm">Summary</td>
+                    <td className="px-6 py-4 text-emerald-600 font-black text-lg">
+                      ${totalFilteredDividends.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )}
                 {filteredDividendsDetail.length > 0 ? (
                   filteredDividendsDetail.sort((a,b) => b.date.localeCompare(a.date)).map((d) => (
                     <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
@@ -322,6 +339,16 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {filteredTransactionsDetail.length > 0 && (
+                  <tr className="bg-blue-50/30 font-bold border-b-2 border-blue-100">
+                    <td className="px-6 py-4 text-blue-800 text-sm">TOTAL</td>
+                    <td className="px-6 py-4 text-blue-800 text-sm">Summary</td>
+                    <td className="px-6 py-4 text-blue-800 text-sm">-</td>
+                    <td className="px-6 py-4 text-blue-700 font-black text-lg">
+                      ${totalFilteredTransactions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                )}
                 {filteredTransactionsDetail.length > 0 ? (
                   filteredTransactionsDetail.sort((a,b) => b.date.localeCompare(a.date)).map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">

@@ -215,14 +215,14 @@ const AppContent = () => {
       </aside>
 
       <main className="flex-1 overflow-x-hidden">
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between">
           <button 
             className="lg:hidden p-2 hover:bg-slate-100 rounded-lg text-slate-600"
             onClick={() => setIsSidebarOpen(true)}
           >
             <Menu size={24} />
           </button>
-          <div className="flex-1 lg:flex-none">
+          <div className="flex-1 md:w-1/3">
             <h2 className="text-lg font-semibold text-slate-800">
               {location.pathname === '/' ? 'Portfolio Dashboard' : 
                location.pathname === '/portfolio' ? 'Current Holdings' :
@@ -230,7 +230,8 @@ const AppContent = () => {
                location.pathname === '/dividends' ? 'Dividend Rewards' : 'Data Management'}
             </h2>
           </div>
-          <div className="flex items-center space-x-3">
+
+          <div className="flex items-center justify-center space-x-3 flex-1 md:w-1/3 order-3 md:order-none w-full md:w-auto mt-4 md:mt-0">
              {location.pathname === '/' && (
                <div className="relative flex items-center bg-white border border-slate-200 rounded-lg pr-3 pl-3 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
                  {dashboardType === 'Dividends' ? (
@@ -243,7 +244,7 @@ const AppContent = () => {
                     onChange={(e) => setDashboardType(e.target.value)}
                     className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[70px]"
                  >
-                   <option value="Overall">年度選項 (Yearly Selection)</option>
+                   <option value="Overall">總覽 (Dashboard)</option>
                    <option value="Dividends">股息明細 (Dividends)</option>
                    <option value="Transactions">交易明細 (Trades)</option>
                  </select>
@@ -257,13 +258,16 @@ const AppContent = () => {
                     onChange={(e) => setSelectedYear(e.target.value)}
                     className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[60px]"
                  >
-                   <option value="All">All Years</option>
+                   <option value="All">歷年 (All)</option>
                    {availableYears.map(yr => (
-                     <option key={yr} value={yr}>{yr}</option>
+                     <option key={yr} value={yr}>{yr}年</option>
                    ))}
                  </select>
                </div>
              )}
+          </div>
+
+          <div className="flex items-center justify-end space-x-3 md:w-1/3">
              {location.pathname === '/transactions' && (
                <button 
                   onClick={clearTransactions}
