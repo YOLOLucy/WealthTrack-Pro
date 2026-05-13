@@ -67,6 +67,7 @@ const AppContent = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string>('All');
+  const [dashboardType, setDashboardType] = useState<string>('Overall');
   const location = useLocation();
 
   useEffect(() => {
@@ -230,6 +231,20 @@ const AppContent = () => {
             </h2>
           </div>
           <div className="flex items-center space-x-3">
+             {location.pathname === '/' && (
+               <div className="relative flex items-center bg-white border border-slate-200 rounded-lg pr-3 pl-3 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
+                 <LayoutDashboard size={16} className="text-slate-400 mr-2" />
+                 <select 
+                    value={dashboardType} 
+                    onChange={(e) => setDashboardType(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[70px]"
+                 >
+                   <option value="Overall">總覽 (Overall)</option>
+                   <option value="Dividends">股息明細 (Dividends)</option>
+                   <option value="Transactions">交易明細 (Trades)</option>
+                 </select>
+               </div>
+             )}
              {availableYears.length > 0 && (
                <div className="relative flex items-center bg-white border border-slate-200 rounded-lg pr-3 pl-3 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
                  <CalendarDays size={16} className="text-slate-400 mr-2" />
@@ -261,21 +276,23 @@ const AppContent = () => {
                >
                  <Trash2 size={18} />
                  <span className="hidden sm:inline">Delete All</span>
-               </button>
-             )}
-             <Link 
-                to="/transactions" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 shadow-sm transition-all"
-             >
-               <PlusCircle size={18} />
-               <span className="hidden sm:inline">Add Trade</span>
-             </Link>
-          </div>
-        </header>
+            </button>
+          )}
+          {location.pathname !== '/' && (
+            <Link 
+              to="/transactions" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 shadow-sm transition-all"
+            >
+              <PlusCircle size={18} />
+              <span className="hidden sm:inline">Add Trade</span>
+            </Link>
+          )}
+        </div>
+      </header>
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           <Routes>
-            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} selectedYear={selectedYear} />} />
+            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} selectedYear={selectedYear} dashboardType={dashboardType} />} />
             <Route 
               path="/portfolio" 
               element={<Portfolio holdings={holdings} onUpdateEstimate={updateDividendEstimate} />} 

@@ -16,7 +16,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Transaction, Dividend, Holding, TransactionType } from '../types';
-import { TrendingUp, DollarSign, Activity, BarChart3, Percent, Layers } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, BarChart3, Percent, Layers, ExternalLink } from 'lucide-react';
 import PortfolioAnalytics from './AIInsights';
 
 const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#ca8a04', '#0891b2'];
@@ -26,6 +26,7 @@ interface DashboardProps {
   transactions: Transaction[];
   dividends: Dividend[];
   selectedYear: string;
+  dashboardType: string;
 }
 
 const StatCard = ({ title, value, subValue, icon: Icon, colorClass }: any) => (
@@ -52,7 +53,7 @@ const getYearFromDate = (dateStr: string) => {
   return match ? match[0] : new Date().getFullYear().toString();
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear }) => {
+const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear, dashboardType }) => {
   const { yearlyData, currentYearStats, prevYearStats, totalStats, targetYear, comparisonYear } = useMemo(() => {
     const years: Record<string, { dividend: number; capitalGain: number }> = {};
     let allTimeRealizedGain = 0;
@@ -145,6 +146,16 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
     })).sort((a, b) => b.value - a.value);
   }, [holdings]);
 
+  const filteredTransactionsDetail = useMemo(() => {
+    if (selectedYear === 'All') return transactions;
+    return transactions.filter(t => t.date.startsWith(selectedYear));
+  }, [transactions, selectedYear]);
+
+  const filteredDividendsDetail = useMemo(() => {
+    if (selectedYear === 'All') return dividends;
+    return dividends.filter(d => d.date.startsWith(selectedYear));
+  }, [dividends, selectedYear]);
+
   return (
     <div className="space-y-8 pb-20">
       {/* Summary Cards */}
@@ -182,75 +193,157 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         />
       </div>
 
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h3 className="text-xl font-bold text-slate-800">Portfolio Growth Evolution</h3>
-            <p className="text-sm text-slate-500">Track your annual success map</p>
-          </div>
-        </div>
-        <div className="h-[400px] w-full">
-          {yearlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={yearlyData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                  formatter={(val: number) => [`$${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '']}
-                />
-                <Legend verticalAlign="top" height={40} iconType="circle" />
-                <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1} />
-                <Bar name="Annual Realized Gain" dataKey="capitalGain" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
-                <Bar name="Annual Dividends" dataKey="dividend" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
-                <Line name="Cumulative Wealth" type="monotone" dataKey="cumulativeProfit" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 italic">
-               <Activity size={48} className="mb-4 opacity-20" />
-               <p>Provide data to see your growth evolution.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <div className="flex items-center space-x-2 mb-6">
-            <Layers className="text-blue-500" size={20} />
-            <h3 className="text-lg font-bold text-slate-800">Asset Allocation</h3>
-          </div>
-          <div className="h-[350px] w-full">
-            {allocationData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={allocationData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={8} dataKey="value">
-                    {allocationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                     formatter={(value: number) => `$${value.toLocaleString()}`}
-                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend layout="horizontal" align="center" verticalAlign="bottom" />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 italic">
-                No active inventory to display distribution.
+      {dashboardType === 'Overall' ? (
+        <>
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Portfolio Growth Evolution</h3>
+                <p className="text-sm text-slate-500">Track your annual success map</p>
               </div>
-            )}
+            </div>
+            <div className="h-[400px] w-full">
+              {yearlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={yearlyData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                      formatter={(val: number) => [`$${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, '']}
+                    />
+                    <Legend verticalAlign="top" height={40} iconType="circle" />
+                    <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1} />
+                    <Bar name="Annual Realized Gain" dataKey="capitalGain" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                    <Bar name="Annual Dividends" dataKey="dividend" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                    <Line name="Cumulative Wealth" type="monotone" dataKey="cumulativeProfit" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff' }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 italic">
+                   <Activity size={48} className="mb-4 opacity-20" />
+                   <p>Provide data to see your growth evolution.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+              <div className="flex items-center space-x-2 mb-6">
+                <Layers className="text-blue-500" size={20} />
+                <h3 className="text-lg font-bold text-slate-800">Asset Allocation</h3>
+              </div>
+              <div className="h-[350px] w-full">
+                {allocationData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={allocationData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={8} dataKey="value">
+                        {allocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                         formatter={(value: number) => `$${value.toLocaleString()}`}
+                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Legend layout="horizontal" align="center" verticalAlign="bottom" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 italic">
+                    No active inventory to display distribution.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 分析區塊：現在改為純本地數學分析，不需要 API */}
+          <div className="mt-8">
+            <PortfolioAnalytics holdings={holdings} transactions={transactions} />
+          </div>
+        </>
+      ) : dashboardType === 'Dividends' ? (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-lg font-bold text-slate-800">Dividend Details ({selectedYear})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredDividendsDetail.length > 0 ? (
+                  filteredDividendsDetail.sort((a,b) => b.date.localeCompare(a.date)).map((d) => (
+                    <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 text-slate-600 text-sm">{d.date}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{d.ticker}</span>
+                          <span className="text-[10px] text-slate-400">{d.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-emerald-600">${d.amount.toLocaleString()}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">No records for this period</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
-
-      {/* 分析區塊：現在改為純本地數學分析，不需要 API */}
-      <div className="mt-8">
-        <PortfolioAnalytics holdings={holdings} transactions={transactions} />
-      </div>
+      ) : (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-lg font-bold text-slate-800">Transaction Details ({selectedYear})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredTransactionsDetail.length > 0 ? (
+                  filteredTransactionsDetail.sort((a,b) => b.date.localeCompare(a.date)).map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 text-slate-600 text-sm whitespace-nowrap">{t.date}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{t.ticker}</span>
+                          <span className="text-[10px] text-slate-400">{t.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.type === 'BUY' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                          {t.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-700">
+                        ${(t.quantity * t.price).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No records for this period</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
