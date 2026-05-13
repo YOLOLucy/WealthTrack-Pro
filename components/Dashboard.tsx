@@ -27,11 +27,15 @@ interface DashboardProps {
   dividends: Dividend[];
   selectedYear: string;
   dashboardType: string;
+  onTypeChange: (type: string) => void;
 }
 
-const StatCard = ({ title, value, subValue, icon: Icon, colorClass }: any) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 h-full">
-    <div className={`p-3 rounded-xl ${colorClass} flex-shrink-0`}>
+const StatCard = ({ title, value, subValue, icon: Icon, colorClass, onClick }: any) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4 h-full ${onClick ? 'cursor-pointer hover:shadow-md transition-all active:scale-95 group' : ''}`}
+  >
+    <div className={`p-3 rounded-xl ${colorClass} flex-shrink-0 group-hover:scale-110 transition-transform`}>
       <Icon size={24} />
     </div>
     <div className="flex-1 min-w-0">
@@ -53,7 +57,7 @@ const getYearFromDate = (dateStr: string) => {
   return match ? match[0] : new Date().getFullYear().toString();
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear, dashboardType }) => {
+const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear, dashboardType, onTypeChange }) => {
   const { yearlyData, currentYearStats, prevYearStats, totalStats, targetYear, comparisonYear } = useMemo(() => {
     const years: Record<string, { dividend: number; capitalGain: number }> = {};
     let allTimeRealizedGain = 0;
@@ -174,6 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
           subValue={`Lifetime: $${totalStats.dividend.toLocaleString()}`}
           icon={DollarSign}
           colorClass="bg-emerald-50 text-emerald-600"
+          onClick={() => onTypeChange('Dividends')}
         />
 
         <StatCard 
@@ -182,6 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
           subValue={`Lifetime: $${totalStats.capitalGain.toLocaleString()}`}
           icon={TrendingUp}
           colorClass={currentYearStats.capitalGain >= 0 ? "bg-indigo-50 text-indigo-600" : "bg-red-50 text-red-600"}
+          onClick={() => onTypeChange('Transactions')}
         />
 
         <StatCard 

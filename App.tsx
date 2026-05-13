@@ -198,7 +198,7 @@ const AppContent = () => {
           <nav className="space-y-2">
             <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" active={location.pathname === '/'} />
             <SidebarItem to="/portfolio" icon={Wallet} label="Inventory" active={location.pathname === '/portfolio'} />
-            <SidebarItem to="/transactions" icon={ArrowLeftRight} label="Transactions" active={location.pathname === '/transactions'} />
+            <SidebarItem to="/transactions" icon={CalendarDays} label="Transactions" active={location.pathname === '/transactions'} />
             <SidebarItem to="/dividends" icon={PiggyBank} label="Dividends" active={location.pathname === '/dividends'} />
             <SidebarItem to="/data" icon={Database} label="Data Manager" active={location.pathname === '/data'} />
           </nav>
@@ -233,13 +233,17 @@ const AppContent = () => {
           <div className="flex items-center space-x-3">
              {location.pathname === '/' && (
                <div className="relative flex items-center bg-white border border-slate-200 rounded-lg pr-3 pl-3 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-500/20">
-                 <LayoutDashboard size={16} className="text-slate-400 mr-2" />
+                 {dashboardType === 'Dividends' ? (
+                   <PiggyBank size={16} className="text-slate-400 mr-2" />
+                 ) : (
+                   <CalendarDays size={16} className="text-slate-400 mr-2" />
+                 )}
                  <select 
                     value={dashboardType} 
                     onChange={(e) => setDashboardType(e.target.value)}
                     className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[70px]"
                  >
-                   <option value="Overall">總覽 (Overall)</option>
+                   <option value="Overall">年度選項 (Yearly Selection)</option>
                    <option value="Dividends">股息明細 (Dividends)</option>
                    <option value="Transactions">交易明細 (Trades)</option>
                  </select>
@@ -292,7 +296,7 @@ const AppContent = () => {
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           <Routes>
-            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} selectedYear={selectedYear} dashboardType={dashboardType} />} />
+            <Route path="/" element={<Dashboard holdings={holdings} transactions={transactions} dividends={dividends} selectedYear={selectedYear} dashboardType={dashboardType} onTypeChange={setDashboardType} />} />
             <Route 
               path="/portfolio" 
               element={<Portfolio holdings={holdings} onUpdateEstimate={updateDividendEstimate} />} 
