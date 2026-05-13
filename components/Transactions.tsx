@@ -9,10 +9,34 @@ interface TransactionsProps {
   onAdd: (t: Transaction) => void;
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
+  selectedYear: string;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDelete, onDeleteAll }) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDelete, onDeleteAll, selectedYear }) => {
   const [showForm, setShowForm] = useState(false);
+  
+  const yearlySummary = React.useMemo(() => {
+    if (selectedYear !== 'All') return null;
+    
+    const summary: Record<string, { buy: number, sell: number, fees: number, count: number }> = {};
+    
+    transactions.forEach(t => {
+      const year = t.date.split('-')[0];
+      if (!summary[year]) {
+        summary[year] = { buy: 0, sell: 0, fees: 0, count: 0 };
+      }
+      const tradeValue = t.quantity * t.price;
+      if (t.type === TransactionType.BUY) {
+        summary[year].buy += tradeValue;
+      } else {
+        summary[year].sell += tradeValue;
+      }
+      summary[year].fees += t.fees;
+      summary[year].count += 1;
+    });
+    
+    return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [transactions, selectedYear]);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     ticker: '',
@@ -288,57 +312,83 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, onAdd, onDele
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Action</th>
-              </tr>
+              {selectedYear === 'All' ? (
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Trades</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Buy Total</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Sell Total</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Net Fees</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right font-bold">Net Outflow</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Action</th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[...transactions].sort((a,b) => b.date.localeCompare(a.date)).map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4 text-slate-600 text-sm whitespace-nowrap">{t.date}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <a 
-                        href={`https://finance.yahoo.com/quote/${t.ticker}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"
+              {selectedYear === 'All' ? (
+                yearlySummary && yearlySummary.map(([year, stats]) => (
+                  <tr key={year} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-900">{year}</td>
+                    <td className="px-6 py-4 text-right text-slate-600">{stats.count}</td>
+                    <td className="px-6 py-4 text-right text-blue-600 font-medium">${stats.buy.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right text-orange-600 font-medium">${stats.sell.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right text-slate-500">${stats.fees.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900">
+                      ${(stats.buy - stats.sell + stats.fees).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                [...transactions].sort((a,b) => b.date.localeCompare(a.date)).map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 text-slate-600 text-sm whitespace-nowrap">{t.date}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <a 
+                          href={`https://finance.yahoo.com/quote/${t.ticker}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"
+                        >
+                          <span>{t.ticker}</span>
+                          <ExternalLink size={12} className="opacity-40" />
+                        </a>
+                        <span className="text-[10px] text-slate-400 truncate max-w-[100px]">{t.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                        t.type === 'BUY' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
+                      }`}>
+                        {t.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{t.quantity}</td>
+                    <td className="px-6 py-4 text-slate-600">${t.price.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-bold text-slate-900">
+                      ${(t.quantity * t.price + (t.type === 'BUY' ? t.fees : -t.fees)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={() => onDelete(t.id)}
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        title="Delete Transaction"
                       >
-                        <span>{t.ticker}</span>
-                        <ExternalLink size={12} className="opacity-40" />
-                      </a>
-                      <span className="text-[10px] text-slate-400 truncate max-w-[100px]">{t.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                      t.type === 'BUY' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      {t.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{t.quantity}</td>
-                  <td className="px-6 py-4 text-slate-600">${t.price.toFixed(2)}</td>
-                  <td className="px-6 py-4 font-bold text-slate-900">
-                    ${(t.quantity * t.price + (t.type === 'BUY' ? t.fees : -t.fees)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => onDelete(t.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Delete Transaction"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
               {transactions.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-400">

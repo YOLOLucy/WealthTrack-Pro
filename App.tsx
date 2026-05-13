@@ -280,8 +280,8 @@ const AppContent = () => {
               path="/portfolio" 
               element={<Portfolio holdings={holdings} onUpdateEstimate={updateDividendEstimate} />} 
             />
-            <Route path="/transactions" element={<Transactions transactions={filteredTransactions} onAdd={addTransaction} onDelete={removeTransaction} onDeleteAll={clearTransactions} />} />
-            <Route path="/dividends" element={<Dividends dividends={filteredDividends} onAdd={addDividend} onDelete={removeDividend} onDeleteAll={clearDividends} />} />
+            <Route path="/transactions" element={<Transactions transactions={filteredTransactions} onAdd={addTransaction} onDelete={removeTransaction} onDeleteAll={clearTransactions} selectedYear={selectedYear} />} />
+            <Route path="/dividends" element={<Dividends dividends={filteredDividends} onAdd={addDividend} onDelete={removeDividend} onDeleteAll={clearDividends} selectedYear={selectedYear} />} />
             <Route 
               path="/data" 
               element={

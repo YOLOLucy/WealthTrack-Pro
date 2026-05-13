@@ -13,6 +13,9 @@ export interface Suggestion {
 const LOCAL_STOCKS: Suggestion[] = [
   { ticker: '2330.TW', name: '台積電 (TSMC)', exchange: 'TWSE' },
    { ticker: '2884.TW', name: '玉山金', exchange: 'TWSE' },
+      { ticker: '2327.TW', name: '國巨*', exchange: 'TWSE' },
+      { ticker: '2752.TW', name: '豆府', exchange: 'TWSE' },
+   { ticker: '2891.TW', name: '中信金', exchange: 'TWSE' },
   { ticker: '0050.TW', name: '元大台灣50', exchange: 'TWSE' },
   { ticker: '0056.TW', name: '元大高股息', exchange: 'TWSE' },
   { ticker: '00878.TW', name: '國泰永續高股息', exchange: 'TWSE' },
@@ -31,11 +34,18 @@ const LOCAL_STOCKS: Suggestion[] = [
   { ticker: 'AMZN', name: 'Amazon.com, Inc.', exchange: 'NASDAQ' },
   { ticker: 'META', name: 'Meta Platforms', exchange: 'NASDAQ' },
   { ticker: 'NFLX', name: 'Netflix, Inc.', exchange: 'NASDAQ' },
+    { ticker: 'LITE', name: '魯門特姆控股公司', exchange: 'NASDAQ' },
+    { ticker: 'COHR', name: 'Coherent Corp', exchange: 'NASDAQ' },
   { ticker: 'AMD', name: 'Advanced Micro Devices', exchange: 'NASDAQ' },
-  { ticker: 'INTC', name: 'Intel Corporation', exchange: 'NASDAQ' },
-  { ticker: '0700.HK', name: '騰訊控股', exchange: 'HKEX' },
-  { ticker: '9988.HK', name: '阿里巴巴', exchange: 'HKEX' },
-  { ticker: '3690.HK', name: '美團', exchange: 'HKEX' }
+  { ticker: 'INTC', name: 'VOO', exchange: 'NASDAQ' },
+    { ticker: 'VOO', name: 'Intel Corporation', exchange: 'NASDAQ' },
+    { ticker: 'QQQ', name: 'QQQ', exchange: 'NASDAQ' },
+  { ticker: '8001.TYO', name: '伊藤忠商事', exchange: 'TYO' },
+   { ticker: '6324.TYO', name: 'Harmonic Drive Systems Inc', exchange: 'TYO' },
+  { ticker: '8002.TYO', name: '丸紅', exchange: 'TYO' },
+  { ticker: '8031.TYO', name: '三井物產', exchange: 'TYO' },
+  { ticker: '8058.TYO', name: '三菱商事', exchange: 'TYO' },
+  { ticker: '8001.TYO', name: '伊藤忠商事', exchange: 'TYO' }
 ];
 
 interface TickerSearchProps {

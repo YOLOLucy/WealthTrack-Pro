@@ -9,10 +9,28 @@ interface DividendsProps {
   onAdd: (d: Dividend) => void;
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
+  selectedYear: string;
 }
 
-const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete, onDeleteAll }) => {
+const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete, onDeleteAll, selectedYear }) => {
   const [showForm, setShowForm] = useState(false);
+  
+  const yearlySummary = React.useMemo(() => {
+    if (selectedYear !== 'All') return null;
+    
+    const summary: Record<string, { total: number, count: number }> = {};
+    
+    dividends.forEach(d => {
+      const year = d.date.split('-')[0];
+      if (!summary[year]) {
+        summary[year] = { total: 0, count: 0 };
+      }
+      summary[year].total += d.amount;
+      summary[year].count += 1;
+    });
+    
+    return Object.entries(summary).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [dividends, selectedYear]);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     ticker: '',
@@ -138,44 +156,64 @@ const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete, onDel
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Amount</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Action</th>
-              </tr>
+              {selectedYear === 'All' ? (
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Payments</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right font-bold text-emerald-700">Total Dividends</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Amount</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Action</th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[...dividends].sort((a,b) => b.date.localeCompare(a.date)).map((d) => (
-                <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4 text-slate-600 text-sm">{d.date}</td>
-                  <td className="px-6 py-4">
-                    <a 
-                      href={`https://finance.yahoo.com/quote/${d.ticker}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"
-                    >
-                      <span>{d.ticker}</span>
-                      <ExternalLink size={12} className="opacity-40" />
-                    </a>
-                  </td>
-                  <td className="px-6 py-4 text-slate-700 text-sm font-medium">{d.name}</td>
-                  <td className="px-6 py-4 text-right font-bold text-emerald-600">
-                    +${d.amount.toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => onDelete(d.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Delete Dividend Record"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {selectedYear === 'All' ? (
+                yearlySummary && yearlySummary.map(([year, stats]) => (
+                  <tr key={year} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-900">{year}</td>
+                    <td className="px-6 py-4 text-right text-slate-600">{stats.count}</td>
+                    <td className="px-6 py-4 text-right font-bold text-emerald-600 text-lg">
+                      +${stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                [...dividends].sort((a,b) => b.date.localeCompare(a.date)).map((d) => (
+                  <tr key={d.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 text-slate-600 text-sm">{d.date}</td>
+                    <td className="px-6 py-4">
+                      <a 
+                        href={`https://finance.yahoo.com/quote/${d.ticker}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center space-x-1 transition-colors"
+                      >
+                        <span>{d.ticker}</span>
+                        <ExternalLink size={12} className="opacity-40" />
+                      </a>
+                    </td>
+                    <td className="px-6 py-4 text-slate-700 text-sm font-medium">{d.name}</td>
+                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                      +${d.amount.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button 
+                        onClick={() => onDelete(d.id)}
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        title="Delete Dividend Record"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
               {dividends.length === 0 && (
                 <tr>
                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
@@ -187,11 +225,11 @@ const Dividends: React.FC<DividendsProps> = ({ dividends, onAdd, onDelete, onDel
             {dividends.length > 0 && (
                <tfoot className="bg-emerald-50/50">
                   <tr>
-                    <td colSpan={3} className="px-6 py-4 font-bold text-slate-700">Lifetime Total Dividends</td>
+                    <td colSpan={selectedYear === 'All' ? 2 : 3} className="px-6 py-4 font-bold text-slate-700">Lifetime Total Dividends</td>
                     <td className="px-6 py-4 text-right font-bold text-emerald-700 text-lg">
                       ${dividends.reduce((acc, curr) => acc + curr.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td></td>
+                    {selectedYear !== 'All' && <td></td>}
                   </tr>
                </tfoot>
             )}
