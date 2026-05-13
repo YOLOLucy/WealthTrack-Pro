@@ -150,10 +150,46 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
     })).sort((a, b) => b.value - a.value);
   }, [holdings]);
 
+  const sellRecordsWithGain = useMemo(() => {
+    const sortedTx = [...transactions].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.type === TransactionType.BUY ? -1 : 1;
+    });
+
+    const costBasisMap: Record<string, { qty: number; totalCost: number }> = {};
+    const sellRecords: any[] = [];
+
+    sortedTx.forEach(t => {
+      if (t.type === TransactionType.BUY) {
+        if (!costBasisMap[t.ticker]) costBasisMap[t.ticker] = { qty: 0, totalCost: 0 };
+        costBasisMap[t.ticker].qty += t.quantity;
+        costBasisMap[t.ticker].totalCost += (t.quantity * t.price + t.fees);
+      } else if (t.type === TransactionType.SELL) {
+        let gain = 0;
+        if (costBasisMap[t.ticker] && costBasisMap[t.ticker].qty > 0) {
+          const avgPrice = costBasisMap[t.ticker].totalCost / costBasisMap[t.ticker].qty;
+          const actualSoldQty = Math.min(t.quantity, costBasisMap[t.ticker].qty);
+          const netProceeds = (t.price * actualSoldQty) - (t.fees * (actualSoldQty / t.quantity));
+          gain = netProceeds - (avgPrice * actualSoldQty);
+          
+          costBasisMap[t.ticker].qty -= actualSoldQty;
+          costBasisMap[t.ticker].totalCost = costBasisMap[t.ticker].qty * avgPrice;
+        }
+        
+        sellRecords.push({
+          ...t,
+          gain: gain
+        });
+      }
+    });
+
+    return sellRecords;
+  }, [transactions]);
+
   const filteredTransactionsDetail = useMemo(() => {
-    if (selectedYear === 'All') return transactions;
-    return transactions.filter(t => t.date.startsWith(selectedYear));
-  }, [transactions, selectedYear]);
+    if (selectedYear === 'All') return sellRecordsWithGain;
+    return sellRecordsWithGain.filter(t => t.date.startsWith(selectedYear));
+  }, [sellRecordsWithGain, selectedYear]);
 
   const filteredDividendsDetail = useMemo(() => {
     if (selectedYear === 'All') return dividends;
@@ -164,8 +200,8 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
     return filteredDividendsDetail.reduce((sum, d) => sum + d.amount, 0);
   }, [filteredDividendsDetail]);
 
-  const totalFilteredTransactions = useMemo(() => {
-    return filteredTransactionsDetail.reduce((sum, t) => sum + (t.quantity * t.price), 0);
+  const totalFilteredGains = useMemo(() => {
+    return filteredTransactionsDetail.reduce((sum, t) => sum + (t.gain || 0), 0);
   }, [filteredTransactionsDetail]);
 
   return (
@@ -336,6 +372,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ticker</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Value</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Gain / Loss</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -344,8 +381,9 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                     <td className="px-6 py-4 text-blue-800 text-sm">TOTAL</td>
                     <td className="px-6 py-4 text-blue-800 text-sm">Summary</td>
                     <td className="px-6 py-4 text-blue-800 text-sm">-</td>
-                    <td className="px-6 py-4 text-blue-700 font-black text-lg">
-                      ${totalFilteredTransactions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <td className="px-6 py-4 text-blue-800 text-sm">-</td>
+                    <td className={`px-6 py-4 text-right font-black text-lg ${totalFilteredGains >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                      ${totalFilteredGains.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 )}
@@ -360,17 +398,20 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.type === 'BUY' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
-                          {t.type}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-600">
+                          SELL
                         </span>
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-700">
-                        ${(t.quantity * t.price).toLocaleString()}
+                        ${(t.quantity * t.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className={`px-6 py-4 text-right font-bold ${t.gain >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {t.gain >= 0 ? '+' : ''}${t.gain.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">No records for this period</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No records for this period</td></tr>
                 )}
               </tbody>
             </table>
