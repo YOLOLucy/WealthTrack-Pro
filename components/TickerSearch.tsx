@@ -19,6 +19,7 @@ const LOCAL_STOCKS: Suggestion[] = [
   { ticker: '0050.TW', name: '元大台灣50', exchange: 'TWSE' },
   { ticker: '0056.TW', name: '元大高股息', exchange: 'TWSE' },
   { ticker: '00878.TW', name: '國泰永續高股息', exchange: 'TWSE' },
+    { ticker: '2241.TW', name: '艾姆勒', exchange: 'TWSE' },
   { ticker: '006208.TW', name: '富邦台灣采吉50', exchange: 'TWSE' },
   { ticker: '00830.TW', name: '國泰費城半導體', exchange: 'TWSE' },
   { ticker: '2317.TW', name: '鴻海 (Foxconn)', exchange: 'TWSE' },
