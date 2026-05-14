@@ -61,11 +61,23 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
   const [selectedTicker, setSelectedTicker] = useState<string>('All');
 
   const availableTickers = useMemo(() => {
-    const tickers = new Set<string>();
-    transactions.forEach(t => tickers.add(t.ticker));
-    dividends.forEach(d => tickers.add(d.ticker));
-    return Array.from(tickers).sort();
-  }, [transactions, dividends]);
+    const tickerMap = new Map<string, string>();
+    
+    const yearlyTransactions = selectedYear === 'All' 
+      ? transactions 
+      : transactions.filter(t => t.date.startsWith(selectedYear));
+    
+    const yearlyDividends = selectedYear === 'All' 
+      ? dividends 
+      : dividends.filter(d => d.date.startsWith(selectedYear));
+
+    yearlyTransactions.forEach(t => tickerMap.set(t.ticker, t.name || ''));
+    yearlyDividends.forEach(d => tickerMap.set(d.ticker, d.name || ''));
+    
+    return Array.from(tickerMap.entries())
+      .map(([ticker, name]) => ({ ticker, name }))
+      .sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }, [transactions, dividends, selectedYear]);
 
   const { yearlyData, currentYearStats, prevYearStats, totalStats, targetYear, comparisonYear } = useMemo(() => {
     const years: Record<string, { dividend: number; capitalGain: number }> = {};
@@ -348,8 +360,8 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                 className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[80px]"
               >
                 <option value="All">All Tickers</option>
-                {availableTickers.map(ticker => (
-                  <option key={ticker} value={ticker}>{ticker}</option>
+                {availableTickers.map(t => (
+                  <option key={t.ticker} value={t.ticker}>{t.ticker} - {t.name}</option>
                 ))}
               </select>
             </div>
@@ -405,8 +417,8 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
                 className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[80px]"
               >
                 <option value="All">All Tickers</option>
-                {availableTickers.map(ticker => (
-                  <option key={ticker} value={ticker}>{ticker}</option>
+                {availableTickers.map(t => (
+                  <option key={t.ticker} value={t.ticker}>{t.ticker} - {t.name}</option>
                 ))}
               </select>
             </div>
