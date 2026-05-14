@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   XAxis, 
   YAxis, 
@@ -16,7 +16,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { Transaction, Dividend, Holding, TransactionType } from '../types';
-import { TrendingUp, DollarSign, Activity, BarChart3, Percent, Layers, ExternalLink } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, BarChart3, Percent, Layers, ExternalLink, Filter } from 'lucide-react';
 import PortfolioAnalytics from './AIInsights';
 
 const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#ca8a04', '#0891b2'];
@@ -58,6 +58,15 @@ const getYearFromDate = (dateStr: string) => {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends, selectedYear, dashboardType, onTypeChange }) => {
+  const [selectedTicker, setSelectedTicker] = useState<string>('All');
+
+  const availableTickers = useMemo(() => {
+    const tickers = new Set<string>();
+    transactions.forEach(t => tickers.add(t.ticker));
+    dividends.forEach(d => tickers.add(d.ticker));
+    return Array.from(tickers).sort();
+  }, [transactions, dividends]);
+
   const { yearlyData, currentYearStats, prevYearStats, totalStats, targetYear, comparisonYear } = useMemo(() => {
     const years: Record<string, { dividend: number; capitalGain: number }> = {};
     let allTimeRealizedGain = 0;
@@ -187,14 +196,26 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
   }, [transactions]);
 
   const filteredTransactionsDetail = useMemo(() => {
-    if (selectedYear === 'All') return sellRecordsWithGain;
-    return sellRecordsWithGain.filter(t => t.date.startsWith(selectedYear));
-  }, [sellRecordsWithGain, selectedYear]);
+    let result = sellRecordsWithGain;
+    if (selectedYear !== 'All') {
+      result = result.filter(t => t.date.startsWith(selectedYear));
+    }
+    if (selectedTicker !== 'All') {
+      result = result.filter(t => t.ticker === selectedTicker);
+    }
+    return result;
+  }, [sellRecordsWithGain, selectedYear, selectedTicker]);
 
   const filteredDividendsDetail = useMemo(() => {
-    if (selectedYear === 'All') return dividends;
-    return dividends.filter(d => d.date.startsWith(selectedYear));
-  }, [dividends, selectedYear]);
+    let result = dividends;
+    if (selectedYear !== 'All') {
+      result = result.filter(d => d.date.startsWith(selectedYear));
+    }
+    if (selectedTicker !== 'All') {
+      result = result.filter(d => d.ticker === selectedTicker);
+    }
+    return result;
+  }, [dividends, selectedYear, selectedTicker]);
 
   const totalFilteredDividends = useMemo(() => {
     return filteredDividendsDetail.reduce((sum, d) => sum + d.amount, 0);
@@ -219,7 +240,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         <StatCard 
           title={`${targetYear} Dividends`} 
           value={`$${currentYearStats.dividend.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-          subValue={`Lifetime: $${totalStats.dividend.toLocaleString()}`}
+          subValue={`Previous: $${prevYearStats.dividend.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           icon={DollarSign}
           colorClass="bg-emerald-50 text-emerald-600"
           onClick={() => onTypeChange('Dividends')}
@@ -228,7 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         <StatCard 
           title={`${targetYear} Realized Gains`} 
           value={`$${currentYearStats.capitalGain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-          subValue={`Lifetime: $${totalStats.capitalGain.toLocaleString()}`}
+          subValue={`Previous: $${prevYearStats.capitalGain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
           icon={TrendingUp}
           colorClass={currentYearStats.capitalGain >= 0 ? "bg-indigo-50 text-indigo-600" : "bg-red-50 text-red-600"}
           onClick={() => onTypeChange('Transactions')}
@@ -317,8 +338,21 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         </>
       ) : dashboardType === 'Dividends' ? (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h3 className="text-lg font-bold text-slate-800">Dividend Details ({selectedYear})</h3>
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+              <Filter size={14} className="text-slate-400 mr-2" />
+              <select 
+                value={selectedTicker}
+                onChange={(e) => setSelectedTicker(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[80px]"
+              >
+                <option value="All">All Tickers</option>
+                {availableTickers.map(ticker => (
+                  <option key={ticker} value={ticker}>{ticker}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -361,8 +395,21 @@ const Dashboard: React.FC<DashboardProps> = ({ holdings, transactions, dividends
         </div>
       ) : (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h3 className="text-lg font-bold text-slate-800">Transaction Details ({selectedYear})</h3>
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+              <Filter size={14} className="text-slate-400 mr-2" />
+              <select 
+                value={selectedTicker}
+                onChange={(e) => setSelectedTicker(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none min-w-[80px]"
+              >
+                <option value="All">All Tickers</option>
+                {availableTickers.map(ticker => (
+                  <option key={ticker} value={ticker}>{ticker}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
